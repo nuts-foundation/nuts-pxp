@@ -7,6 +7,28 @@ servers:
     description: Default endpoint
 paths:
   /pip/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: An identifier for the data, used for deletion and updates
+        content:
+          plain/text:
+            schema:
+              type: string
+              example: 1111-2222-3333-4444
+    get:
+      operationId: getData
+      summary: Get pip data for given ide
+      tags:
+        - pip
+      responses:
+        '200':
+          description: Data known for id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Data'
     post:
       operationId: createData
       summary: Add authorization data used for OPA evaluation
@@ -14,22 +36,20 @@ paths:
         Add data to the PIP.
       tags:
         - pip
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: An identifier for the data, used for deletion and updates
-          content:
-            plain/text:
-              schema:
-                type: string
-                example: 1111-2222-3333-4444
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/Data'
+      responses:
+        '204':
+          description: Successful request. No content.
+    delete:
+      operationId: deleteData
+      summary: Delete data for given id
+      tags:
+        - pip
       responses:
         '204':
           description: Successful request. No content.

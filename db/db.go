@@ -3,6 +3,9 @@ package db
 import (
 	"context"
 	"errors"
+	"os"
+	"strings"
+
 	"github.com/glebarez/sqlite"
 	"github.com/nuts-foundation/nuts-pxp/config"
 	sql_migrations "github.com/nuts-foundation/nuts-pxp/db/migrations"
@@ -11,9 +14,9 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
-	"os"
-	"strings"
 )
+
+var _ DB = (*SqlDB)(nil)
 
 type SqlDB struct {
 	sqlDB *gorm.DB
@@ -96,10 +99,37 @@ func New(config config.Config) (*SqlDB, error) {
 	return e, nil
 }
 
-func (e *SqlDB) Close() error {
-	sqlDB, err := e.sqlDB.DB()
+func (db *SqlDB) Close() error {
+	sqlDB, err := db.sqlDB.DB()
 	if err != nil {
 		return err
 	}
 	return sqlDB.Close()
+}
+
+func (db *SqlDB) Create(data SQLData) error {
+	return db.sqlDB.Create(data).Error
+}
+
+func (db *SqlDB) Delete(id string) error {
+	return db.sqlDB.Where("id = ?", id).Delete(&SQLData{}).Error
+}
+
+func (db *SqlDB) Get(id string) (SQLData, error) {
+	var record SQLData
+	err := db.sqlDB.Model(&SQLData{}).Where("id = ?", id).First(&record).Error
+	if err != nil {
+		return SQLData{}, err
+	}
+	return record, nil
+}
+
+func (db *SqlDB) Query(scope string, verifier string, client string) (string, error) {
+	var record SQLData
+	err := db.sqlDB.Model(&SQLData{}).Where("scope = ? AND verifier = ? AND client = ?", scope, verifier, client).
+		First(&record).Error
+	if err != nil {
+		return "", err
+	}
+	return record.AuthInput, nil
 }

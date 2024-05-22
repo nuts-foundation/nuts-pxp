@@ -64,7 +64,7 @@ func main() {
 	echoServer.HidePort = true
 
 	// init API & register routes
-	pipController := &pip.Wrapper{}
+	pipController := &pip.Wrapper{DB: sqlDb}
 	opaController := &opa.Wrapper{}
 	pip.RegisterHandlers(echoServer, pip.NewStrictHandler(pipController, []pip.StrictMiddlewareFunc{}))
 	opa.RegisterHandlers(echoServer, opa.NewStrictHandler(opaController, []opa.StrictMiddlewareFunc{}))

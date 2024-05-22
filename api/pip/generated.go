@@ -5,6 +5,7 @@ package pip
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -32,6 +33,12 @@ type CreateDataJSONRequestBody = Data
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Delete data for given id
+	// (DELETE /pip/{id})
+	DeleteData(ctx echo.Context, id string) error
+	// Get pip data for given ide
+	// (GET /pip/{id})
+	GetData(ctx echo.Context, id string) error
 	// Add authorization data used for OPA evaluation
 	// (POST /pip/{id})
 	CreateData(ctx echo.Context, id string) error
@@ -40,6 +47,32 @@ type ServerInterface interface {
 // ServerInterfaceWrapper converts echo contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler ServerInterface
+}
+
+// DeleteData converts echo context to params.
+func (w *ServerInterfaceWrapper) DeleteData(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	id = ctx.Param("id")
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.DeleteData(ctx, id)
+	return err
+}
+
+// GetData converts echo context to params.
+func (w *ServerInterfaceWrapper) GetData(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	id = ctx.Param("id")
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetData(ctx, id)
+	return err
 }
 
 // CreateData converts echo context to params.
@@ -83,8 +116,43 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 		Handler: si,
 	}
 
+	router.DELETE(baseURL+"/pip/:id", wrapper.DeleteData)
+	router.GET(baseURL+"/pip/:id", wrapper.GetData)
 	router.POST(baseURL+"/pip/:id", wrapper.CreateData)
 
+}
+
+type DeleteDataRequestObject struct {
+	Id string `json:"id"`
+}
+
+type DeleteDataResponseObject interface {
+	VisitDeleteDataResponse(w http.ResponseWriter) error
+}
+
+type DeleteData204Response struct {
+}
+
+func (response DeleteData204Response) VisitDeleteDataResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type GetDataRequestObject struct {
+	Id string `json:"id"`
+}
+
+type GetDataResponseObject interface {
+	VisitGetDataResponse(w http.ResponseWriter) error
+}
+
+type GetData200JSONResponse Data
+
+func (response GetData200JSONResponse) VisitGetDataResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type CreateDataRequestObject struct {
@@ -106,6 +174,12 @@ func (response CreateData204Response) VisitCreateDataResponse(w http.ResponseWri
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Delete data for given id
+	// (DELETE /pip/{id})
+	DeleteData(ctx context.Context, request DeleteDataRequestObject) (DeleteDataResponseObject, error)
+	// Get pip data for given ide
+	// (GET /pip/{id})
+	GetData(ctx context.Context, request GetDataRequestObject) (GetDataResponseObject, error)
 	// Add authorization data used for OPA evaluation
 	// (POST /pip/{id})
 	CreateData(ctx context.Context, request CreateDataRequestObject) (CreateDataResponseObject, error)
@@ -121,6 +195,56 @@ func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareF
 type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
+}
+
+// DeleteData operation middleware
+func (sh *strictHandler) DeleteData(ctx echo.Context, id string) error {
+	var request DeleteDataRequestObject
+
+	request.Id = id
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteData(ctx.Request().Context(), request.(DeleteDataRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteData")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(DeleteDataResponseObject); ok {
+		return validResponse.VisitDeleteDataResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetData operation middleware
+func (sh *strictHandler) GetData(ctx echo.Context, id string) error {
+	var request GetDataRequestObject
+
+	request.Id = id
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetData(ctx.Request().Context(), request.(GetDataRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetData")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(GetDataResponseObject); ok {
+		return validResponse.VisitGetDataResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
 }
 
 // CreateData operation middleware
