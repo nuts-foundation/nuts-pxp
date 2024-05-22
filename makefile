@@ -1,4 +1,4 @@
-.PHONY: run-generators test
+.PHONY: run-generators test api
 
 run-generators: api
 
@@ -8,7 +8,8 @@ install-tools:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2
 
 api:
-	oapi-codegen --config oas/pip.config.yaml oas/pip.yaml | gofmt > api/generated.go
+	oapi-codegen --config oas/pip.config.yaml oas/pip.yaml | gofmt > api/pip/generated.go
+	oapi-codegen --config oas/opa.config.yaml oas/opa.yaml | gofmt > api/opa/generated.go
 
 lint:
 	golangci-lint run -v

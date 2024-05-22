@@ -1,6 +1,8 @@
-package api
+package pip
 
 import "context"
+
+var _ StrictServerInterface = (*Wrapper)(nil)
 
 type Wrapper struct{}
 

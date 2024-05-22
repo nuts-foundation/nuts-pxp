@@ -29,7 +29,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/nuts-foundation/nuts-pxp/api"
+	"github.com/nuts-foundation/nuts-pxp/api/opa"
+	"github.com/nuts-foundation/nuts-pxp/api/pip"
 	"github.com/nuts-foundation/nuts-pxp/config"
 	"github.com/nuts-foundation/nuts-pxp/db"
 )
@@ -63,8 +64,10 @@ func main() {
 	echoServer.HidePort = true
 
 	// init API & register routes
-	controller := &api.Wrapper{}
-	api.RegisterHandlers(echoServer, api.NewStrictHandler(controller, []api.StrictMiddlewareFunc{}))
+	pipController := &pip.Wrapper{}
+	opaController := &opa.Wrapper{}
+	pip.RegisterHandlers(echoServer, pip.NewStrictHandler(pipController, []pip.StrictMiddlewareFunc{}))
+	opa.RegisterHandlers(echoServer, opa.NewStrictHandler(opaController, []opa.StrictMiddlewareFunc{}))
 
 	// Start server
 	go func() {

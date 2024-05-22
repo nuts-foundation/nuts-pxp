@@ -1,4 +1,4 @@
-package: pip
+package: opa
 generate:
   echo-server: true
   models: true
