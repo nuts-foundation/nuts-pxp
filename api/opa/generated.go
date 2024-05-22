@@ -13,35 +13,26 @@ import (
 	strictecho "github.com/oapi-codegen/runtime/strictmiddleware/echo"
 )
 
-// Input defines model for Input.
-type Input struct {
-	// ClientId client DID (for now)
-	ClientId string `json:"client_id"`
-
-	// Request The http request
-	Request map[string]interface{} `json:"request"`
-
-	// VerifierId verifier DID (for now)
-	VerifierId string `json:"verifier_id"`
-
-	// XUserInfo Result from token introspection
-	XUserInfo map[string]interface{} `json:"x_user_info"`
-}
-
 // Outcome defines model for Outcome.
 type Outcome struct {
 	// Allow The result of the OPA policy evaluation
 	Allow bool `json:"allow"`
 }
 
-// EvaluateDocumentJSONRequestBody defines body for EvaluateDocument for application/json ContentType.
-type EvaluateDocumentJSONRequestBody = Input
+// EvaluateDocumentParams defines parameters for EvaluateDocument.
+type EvaluateDocumentParams struct {
+	// Request request line from nginx
+	Request string `json:"request"`
+
+	// XUserinfo token introspection result
+	XUserinfo string `json:"X-Userinfo"`
+}
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// calls https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input internally
-	// (POST /v1/data/{scope})
-	EvaluateDocument(ctx echo.Context, scope string) error
+	// (POST /v1/data)
+	EvaluateDocument(ctx echo.Context, params EvaluateDocumentParams) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -52,13 +43,42 @@ type ServerInterfaceWrapper struct {
 // EvaluateDocument converts echo context to params.
 func (w *ServerInterfaceWrapper) EvaluateDocument(ctx echo.Context) error {
 	var err error
-	// ------------- Path parameter "scope" -------------
-	var scope string
 
-	scope = ctx.Param("scope")
+	// Parameter object where we will unmarshal all parameters from the context
+	var params EvaluateDocumentParams
+
+	headers := ctx.Request().Header
+	// ------------- Required header parameter "request" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("request")]; found {
+		var Request string
+		n := len(valueList)
+		if n != 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for request, got %d", n))
+		}
+
+		params.Request = valueList[0]
+
+		params.Request = Request
+	} else {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Header parameter request is required, but not found"))
+	}
+	// ------------- Required header parameter "X-Userinfo" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Userinfo")]; found {
+		var XUserinfo string
+		n := len(valueList)
+		if n != 1 {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for X-Userinfo, got %d", n))
+		}
+
+		params.XUserinfo = valueList[0]
+
+		params.XUserinfo = XUserinfo
+	} else {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Header parameter X-Userinfo is required, but not found"))
+	}
 
 	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.EvaluateDocument(ctx, scope)
+	err = w.Handler.EvaluateDocument(ctx, params)
 	return err
 }
 
@@ -90,13 +110,12 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 		Handler: si,
 	}
 
-	router.POST(baseURL+"/v1/data/:scope", wrapper.EvaluateDocument)
+	router.POST(baseURL+"/v1/data", wrapper.EvaluateDocument)
 
 }
 
 type EvaluateDocumentRequestObject struct {
-	Scope string `json:"scope"`
-	Body  *EvaluateDocumentJSONRequestBody
+	Params EvaluateDocumentParams
 }
 
 type EvaluateDocumentResponseObject interface {
@@ -115,7 +134,7 @@ func (response EvaluateDocument200JSONResponse) VisitEvaluateDocumentResponse(w 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// calls https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input internally
-	// (POST /v1/data/{scope})
+	// (POST /v1/data)
 	EvaluateDocument(ctx context.Context, request EvaluateDocumentRequestObject) (EvaluateDocumentResponseObject, error)
 }
 
@@ -132,16 +151,10 @@ type strictHandler struct {
 }
 
 // EvaluateDocument operation middleware
-func (sh *strictHandler) EvaluateDocument(ctx echo.Context, scope string) error {
+func (sh *strictHandler) EvaluateDocument(ctx echo.Context, params EvaluateDocumentParams) error {
 	var request EvaluateDocumentRequestObject
 
-	request.Scope = scope
-
-	var body EvaluateDocumentJSONRequestBody
-	if err := ctx.Bind(&body); err != nil {
-		return err
-	}
-	request.Body = &body
+	request.Params = params
 
 	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
 		return sh.ssi.EvaluateDocument(ctx.Request().Context(), request.(EvaluateDocumentRequestObject))

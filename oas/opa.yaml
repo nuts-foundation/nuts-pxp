@@ -6,30 +6,33 @@ servers:
   - url: http://localhost:8080
     description: Default endpoint
 paths:
-  /v1/data/{scope}:
+  /v1/data:
     post:
       operationId: evaluateDocument
       summary: calls https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input internally
       description: |
-        The given scope, request, client_id and verifier_id are used to create the input document for the OPA policy.
+        The given request and X-Userinfo headers are used to create the input document for the OPA policy.
       tags:
         - opa
       parameters:
-        - name: scope
-          in: path
+        - name: request
+          in: header
           required: true
-          description: maps to the package of the OPA policy
+          description: request line from nginx
           content:
             plain/text:
               schema:
                 type: string
-                example: test
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Input'
+                example: GET /fhir/Patient/123?subject.identifier=1234567890 HTTP/1.1
+        - name: X-Userinfo
+          in: header
+          required: true
+          description: token introspection result
+          content:
+            plain/text:
+              schema:
+                type: string
+                example: {"client_id":"did:web:example.com:iam:client","sub":"did:web:example.com:iam:verifier", "scope":"eOverdracht-sender"}
       responses:
         '200':
           description: Successful request. Returns the result of the OPA policy evaluation
@@ -39,28 +42,6 @@ paths:
                 $ref: '#/components/schemas/Outcome'
 components:
   schemas:
-    Input:
-      type: object
-      required:
-        - request
-        - client_id
-        - verifier_id
-        - x_user_info
-      properties:
-        request:
-          type: object
-          description: The http request
-        client_id:
-          type: string
-          description: client DID (for now)
-          example: did:web:example.com:iam:client
-        verifier_id:
-          type: string
-          description: verifier DID (for now)
-          example: did:web:example.com:iam:verifier
-        x_user_info:
-          type: object
-          description: Result from token introspection
     Outcome:
       type: object
       required:
