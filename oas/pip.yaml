@@ -1,0 +1,59 @@
+openapi: 3.0.0
+info:
+  title: PIP data API
+  version: 0.0.0
+servers:
+  - url: http://localhost:8080
+    description: Default endpoint
+paths:
+  /pip/{id}:
+    post:
+      operationId: createData
+      summary: Add authorization data used for OPA evaluation
+      description: |
+        Add data to the PIP.
+      tags:
+        - pip
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: An identifier for the data, used for deletion and updates
+          content:
+            plain/text:
+              schema:
+                type: string
+                example: 1111-2222-3333-4444
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Data'
+      responses:
+        '204':
+          description: Successful request. No content.
+components:
+  schemas:
+    Data:
+      type: object
+      required:
+        - scope
+        - client_id
+        - verifier_id
+        - auth_input
+      properties:
+        scope:
+          type: string
+          description: The scope. Corresponds to the auth scopes
+        client_id:
+          type: string
+          description: client DID (for now)
+          example: did:web:example.com:iam:client
+        verifier_id:
+          type: string
+          description: verifier DID (for now)
+          example: did:web:example.com:iam:verifier
+        auth_input:
+          type: object
+          description: Data used in OPA script
