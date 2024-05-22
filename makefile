@@ -17,4 +17,4 @@ test:
 	go test ./...
 
 docker:
-	docker build -t nutsfoundation/nuts-npxp:main .
+	docker build -t nutsfoundation/nuts-pxp:main .
