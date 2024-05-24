@@ -22,6 +22,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/nuts-foundation/nuts-pxp/policy"
 	"net/http"
 	"os"
 	"os/signal"
@@ -58,14 +59,21 @@ func main() {
 		}
 	}()
 
+	// init OPA
+	decisionMaker, err := policy.New(cfg, sqlDb)
+	if err != nil {
+		panic(err)
+	}
+
 	// init http server and bind to localhost:8080
 	echoServer := echo.New()
+	echoServer.HTTPErrorHandler = errorHandlerfunc
 	echoServer.HideBanner = true
 	echoServer.HidePort = true
 
 	// init API & register routes
 	pipController := &pip.Wrapper{DB: sqlDb}
-	opaController := &opa.Wrapper{}
+	opaController := &opa.Wrapper{DecisionMaker: decisionMaker}
 	pip.RegisterHandlers(echoServer, pip.NewStrictHandler(pipController, []pip.StrictMiddlewareFunc{}))
 	opa.RegisterHandlers(echoServer, opa.NewStrictHandler(opaController, []opa.StrictMiddlewareFunc{}))
 
@@ -82,5 +90,11 @@ func main() {
 	defer cancel()
 	if err := echoServer.Shutdown(ctx); err != nil {
 		panic(err)
+	}
+}
+
+func errorHandlerfunc(err error, ctx echo.Context) {
+	if !ctx.Response().Committed {
+		ctx.Response().Write([]byte(err.Error()))
 	}
 }

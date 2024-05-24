@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/oapi-codegen/runtime"
 	strictecho "github.com/oapi-codegen/runtime/strictmiddleware/echo"
 )
 
@@ -25,7 +26,7 @@ type EvaluateDocumentParams struct {
 	Request string `json:"request"`
 
 	// XUserinfo token introspection result
-	XUserinfo string `json:"X-Userinfo"`
+	XUserinfo map[string]interface{} `json:"X-Userinfo"`
 }
 
 // ServerInterface represents all server handlers.
@@ -56,7 +57,10 @@ func (w *ServerInterfaceWrapper) EvaluateDocument(ctx echo.Context) error {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for request, got %d", n))
 		}
 
-		params.Request = valueList[0]
+		err = runtime.BindStyledParameterWithOptions("simple", "request", valueList[0], &Request, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter request: %s", err))
+		}
 
 		params.Request = Request
 	} else {
@@ -64,13 +68,16 @@ func (w *ServerInterfaceWrapper) EvaluateDocument(ctx echo.Context) error {
 	}
 	// ------------- Required header parameter "X-Userinfo" -------------
 	if valueList, found := headers[http.CanonicalHeaderKey("X-Userinfo")]; found {
-		var XUserinfo string
+		var XUserinfo map[string]interface{}
 		n := len(valueList)
 		if n != 1 {
 			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for X-Userinfo, got %d", n))
 		}
 
-		params.XUserinfo = valueList[0]
+		err = json.Unmarshal([]byte(valueList[0]), &XUserinfo)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Error unmarshaling parameter 'X-Userinfo' as JSON")
+		}
 
 		params.XUserinfo = XUserinfo
 	} else {

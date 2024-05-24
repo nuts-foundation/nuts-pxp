@@ -24,6 +24,7 @@ const configValueListSeparator = ","
 
 type Config struct {
 	configMap *koanf.Koanf
+	PolicyDir string    `koanf:"policy_dir"`
 	SQL       SQLConfig `koanf:"sql"`
 }
 

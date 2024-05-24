@@ -19,19 +19,17 @@ paths:
           in: header
           required: true
           description: request line from nginx
-          content:
-            plain/text:
-              schema:
-                type: string
-                example: GET /fhir/Patient/123?subject.identifier=1234567890 HTTP/1.1
+          schema:
+            type: string
+            example: GET /fhir/Patient/123?subject.identifier=1234567890 HTTP/1.1
         - name: X-Userinfo
           in: header
           required: true
           description: token introspection result
           content:
-            plain/text:
+            application/json:
               schema:
-                type: string
+                type: object
                 example: {"client_id":"did:web:example.com:iam:client","sub":"did:web:example.com:iam:verifier", "scope":"eOverdracht-sender"}
       responses:
         '200':
