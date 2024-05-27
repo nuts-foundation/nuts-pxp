@@ -126,6 +126,7 @@ func (db *SqlDB) Get(id string) (SQLData, error) {
 
 func (db *SqlDB) Query(scope string, verifier string, client string) (string, error) {
 	var record SQLData
+	// todo multiple records
 	err := db.sqlDB.Model(&SQLData{}).Where("scope = ? AND verifier = ? AND client = ?", scope, verifier, client).
 		First(&record).Error
 	if err != nil {
