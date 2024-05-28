@@ -22,6 +22,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/nuts-foundation/nuts-pxp/policy"
 	"net/http"
 	"os"
@@ -94,6 +95,8 @@ func main() {
 }
 
 func errorHandlerfunc(err error, ctx echo.Context) {
+	fmt.Printf("error: %s\n", err.Error())
+	ctx.Response().Status = http.StatusInternalServerError
 	if !ctx.Response().Committed {
 		ctx.Response().Write([]byte(err.Error()))
 	}

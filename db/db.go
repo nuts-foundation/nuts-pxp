@@ -124,13 +124,21 @@ func (db *SqlDB) Get(id string) (SQLData, error) {
 	return record, nil
 }
 
-func (db *SqlDB) Query(scope string, verifier string, client string) (string, error) {
+func (db *SqlDB) Query(scope string, verifier string, client string) ([]string, error) {
 	var record SQLData
-	// todo multiple records
-	err := db.sqlDB.Model(&SQLData{}).Where("scope = ? AND verifier = ? AND client = ?", scope, verifier, client).
-		First(&record).Error
+	results := make([]string, 0)
+	rows, err := db.sqlDB.Model(&SQLData{}).Where("scope = ? AND verifier = ? AND client = ?", scope, verifier, client).
+		Rows()
 	if err != nil {
-		return "", err
+		return results, err
 	}
-	return record.AuthInput, nil
+	// iterate over rows
+	for rows.Next() {
+		err = db.sqlDB.ScanRows(rows, &record)
+		if err != nil {
+			return results, err
+		}
+		results = append(results, record.AuthInput)
+	}
+	return results, nil
 }

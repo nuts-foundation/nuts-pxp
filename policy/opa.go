@@ -3,7 +3,9 @@ package policy
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"gorm.io/gorm"
 	"os"
 	"strings"
 
@@ -51,24 +53,26 @@ func (dm *OPADecision) Query(ctx context.Context, requestLine map[string]interfa
 
 	// query DB for runtime data
 	data, err := dm.db.Query(scope, verifier, client)
-	if err != nil {
-		return false, err
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			data = []string{}
+		} else {
+			return false, err
+		}
 	}
 
 	// parse the data into a map
 	input := map[string]interface{}{}
 	external := map[string]interface{}{}
-	request := map[string]interface{}{}
-	err = json.Unmarshal([]byte(data), &external)
-	if err != nil {
-		return false, err
-	}
-	for k, v := range requestLine {
-		request[k] = v
+	for _, stringAuthInput := range data {
+		err = json.Unmarshal([]byte(stringAuthInput), &external)
+		if err != nil {
+			return false, err
+		}
 	}
 	// merge the request line and introspection result into the input
 	input["external"] = external
-	input["request"] = request
+	input["request"] = requestLine
 	for k, v := range introspectionResult {
 		input[k] = v
 	}
