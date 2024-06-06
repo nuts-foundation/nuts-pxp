@@ -1,6 +1,6 @@
 package: opa
 generate:
-  echo-server: true
+  std-http-server: true
   models: true
   strict-server: true
 output-options:

@@ -5,7 +5,6 @@ go 1.22
 require (
 	github.com/glebarez/sqlite v1.11.0
 	github.com/knadh/koanf v1.5.0
-	github.com/labstack/echo/v4 v4.12.0
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/open-policy-agent/opa v0.64.1
 	github.com/pressly/goose/v3 v3.20.0
