@@ -3,13 +3,24 @@ package pip
 import (
 	"context"
 	"encoding/json"
+	http2 "net/http"
+
 	"github.com/nuts-foundation/nuts-pxp/db"
+	"github.com/nuts-foundation/nuts-pxp/http"
 )
 
 var _ StrictServerInterface = (*Wrapper)(nil)
+var _ http.Router = (*Wrapper)(nil)
 
 type Wrapper struct {
 	DB db.DB
+}
+
+func (w Wrapper) Routes(router *http2.ServeMux) {
+	HandlerFromMux(NewStrictHandlerWithOptions(w, []StrictMiddlewareFunc{}, StrictHTTPServerOptions{
+		RequestErrorHandlerFunc:  http.ErrorHandlerFunc,
+		ResponseErrorHandlerFunc: http.ErrorHandlerFunc,
+	}), router)
 }
 
 func (w Wrapper) CreateData(_ context.Context, request CreateDataRequestObject) (CreateDataResponseObject, error) {

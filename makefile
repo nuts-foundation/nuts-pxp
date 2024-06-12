@@ -3,7 +3,7 @@
 run-generators: api
 
 install-tools:
-	go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@v2.2.0
+	go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.3.0
 	go install go.uber.org/mock/mockgen@v0.4.0
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.2
 

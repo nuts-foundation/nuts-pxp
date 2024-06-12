@@ -11,24 +11,25 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/oapi-codegen/runtime"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
 )
 
 // Outcome defines model for Outcome.
 type Outcome struct {
-	// Allow The result of the OPA policy evaluation
-	Allow bool `json:"allow"`
+	Result map[string]interface{} `json:"result"`
 }
+
+// EvaluateDocumentJSONBody defines parameters for EvaluateDocument.
+type EvaluateDocumentJSONBody = map[string]interface{}
 
 // EvaluateDocumentParams defines parameters for EvaluateDocument.
 type EvaluateDocumentParams struct {
-	// Request request line from nginx
-	Request string `json:"request"`
-
 	// XUserinfo token introspection result
-	XUserinfo map[string]interface{} `json:"X-Userinfo"`
+	XUserinfo *map[string]interface{} `json:"X-Userinfo,omitempty"`
 }
+
+// EvaluateDocumentJSONRequestBody defines body for EvaluateDocument for application/json ContentType.
+type EvaluateDocumentJSONRequestBody = EvaluateDocumentJSONBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -57,30 +58,7 @@ func (siw *ServerInterfaceWrapper) EvaluateDocument(w http.ResponseWriter, r *ht
 
 	headers := r.Header
 
-	// ------------- Required header parameter "request" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("request")]; found {
-		var Request string
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "request", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "request", valueList[0], &Request, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "request", Err: err})
-			return
-		}
-
-		params.Request = Request
-
-	} else {
-		err := fmt.Errorf("Header parameter request is required, but not found")
-		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "request", Err: err})
-		return
-	}
-
-	// ------------- Required header parameter "X-Userinfo" -------------
+	// ------------- Optional header parameter "X-Userinfo" -------------
 	if valueList, found := headers[http.CanonicalHeaderKey("X-Userinfo")]; found {
 		var XUserinfo map[string]interface{}
 		n := len(valueList)
@@ -95,12 +73,8 @@ func (siw *ServerInterfaceWrapper) EvaluateDocument(w http.ResponseWriter, r *ht
 			return
 		}
 
-		params.XUserinfo = XUserinfo
+		params.XUserinfo = &XUserinfo
 
-	} else {
-		err := fmt.Errorf("Header parameter X-Userinfo is required, but not found")
-		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "X-Userinfo", Err: err})
-		return
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -235,6 +209,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 
 type EvaluateDocumentRequestObject struct {
 	Params EvaluateDocumentParams
+	Body   *EvaluateDocumentJSONRequestBody
 }
 
 type EvaluateDocumentResponseObject interface {
@@ -291,6 +266,13 @@ func (sh *strictHandler) EvaluateDocument(w http.ResponseWriter, r *http.Request
 	var request EvaluateDocumentRequestObject
 
 	request.Params = params
+
+	var body EvaluateDocumentJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
 		return sh.ssi.EvaluateDocument(ctx, request.(EvaluateDocumentRequestObject))

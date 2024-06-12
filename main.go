@@ -22,7 +22,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -67,17 +66,8 @@ func main() {
 
 	// init API & register routes
 	serveMux := http.NewServeMux()
-	pipController := &pip.Wrapper{DB: sqlDb}
-	pip.HandlerFromMux(pip.NewStrictHandlerWithOptions(pipController, []pip.StrictMiddlewareFunc{}, pip.StrictHTTPServerOptions{
-		RequestErrorHandlerFunc:  errorHandlerfunc,
-		ResponseErrorHandlerFunc: errorHandlerfunc,
-	}), serveMux)
-
-	opaController := &opa.Wrapper{DecisionMaker: decisionMaker}
-	opa.HandlerFromMux(opa.NewStrictHandlerWithOptions(opaController, []opa.StrictMiddlewareFunc{}, opa.StrictHTTPServerOptions{
-		RequestErrorHandlerFunc:  errorHandlerfunc,
-		ResponseErrorHandlerFunc: errorHandlerfunc,
-	}), serveMux)
+	(&pip.Wrapper{DB: sqlDb}).Routes(serveMux)
+	(&opa.Wrapper{DecisionMaker: decisionMaker}).Routes(serveMux)
 
 	// Start server
 	s := &http.Server{
@@ -94,13 +84,7 @@ func main() {
 	<-ctx.Done()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := s.Shutdown(ctx); err != nil {
+	if err = s.Shutdown(ctx); err != nil {
 		panic(err)
 	}
-}
-
-func errorHandlerfunc(w http.ResponseWriter, _ *http.Request, err error) {
-	fmt.Printf("error: %s\n", err.Error())
-	w.WriteHeader(http.StatusInternalServerError)
-	_, _ = w.Write([]byte(err.Error()))
 }
