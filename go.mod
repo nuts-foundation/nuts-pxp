@@ -10,7 +10,7 @@ require (
 	github.com/open-policy-agent/opa v0.64.1
 	github.com/pressly/goose/v3 v3.20.0
 	github.com/spf13/pflag v1.0.5
-	gorm.io/driver/mysql v1.5.6
+	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.7
 	gorm.io/driver/sqlserver v1.5.3
 	gorm.io/gorm v1.25.10
