@@ -38,6 +38,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Outcome'
+  /v1/data/apisix:
+    post:
+      operationId: evaluateDocumentApisix
+      summary: calls https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input internally
+      description: |
+        The given request and X-Userinfo headers are used to create the input document for the OPA policy.
+      tags:
+        - opa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Successful request. Returns the result of the OPA policy evaluation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApisixOutcome'
 components:
   schemas:
     Outcome:
@@ -49,3 +69,10 @@ components:
           type: boolean
           description: The result of the OPA policy evaluation
           example: true
+    ApisixOutcome:
+      type: object
+      required:
+        - result
+      properties:
+        result:
+          type: object
