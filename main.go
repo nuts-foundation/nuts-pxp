@@ -22,19 +22,17 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
-	"github.com/nuts-foundation/nuts-pxp/policy"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/nuts-foundation/nuts-pxp/api/opa"
 	"github.com/nuts-foundation/nuts-pxp/api/pip"
 	"github.com/nuts-foundation/nuts-pxp/config"
 	"github.com/nuts-foundation/nuts-pxp/db"
+	"github.com/nuts-foundation/nuts-pxp/policy"
 )
 
 func main() {
@@ -66,21 +64,18 @@ func main() {
 		panic(err)
 	}
 
-	// init http server and bind to localhost:8080
-	echoServer := echo.New()
-	echoServer.HTTPErrorHandler = errorHandlerfunc
-	echoServer.HideBanner = true
-	echoServer.HidePort = true
-
 	// init API & register routes
-	pipController := &pip.Wrapper{DB: sqlDb}
-	opaController := &opa.Wrapper{DecisionMaker: decisionMaker}
-	pip.RegisterHandlers(echoServer, pip.NewStrictHandler(pipController, []pip.StrictMiddlewareFunc{}))
-	opa.RegisterHandlers(echoServer, opa.NewStrictHandler(opaController, []opa.StrictMiddlewareFunc{}))
+	serveMux := http.NewServeMux()
+	(&pip.Wrapper{DB: sqlDb}).Routes(serveMux)
+	(&opa.Wrapper{DecisionMaker: decisionMaker}).Routes(serveMux)
 
 	// Start server
+	s := &http.Server{
+		Handler: serveMux,
+		Addr:    "0.0.0.0:8080",
+	}
 	go func() {
-		if err := echoServer.Start(":8080"); err != nil && errors.Is(err, http.ErrServerClosed) {
+		if err := s.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
 			panic("shutting down the server")
 		}
 	}()
@@ -89,15 +84,7 @@ func main() {
 	<-ctx.Done()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := echoServer.Shutdown(ctx); err != nil {
+	if err = s.Shutdown(ctx); err != nil {
 		panic(err)
-	}
-}
-
-func errorHandlerfunc(err error, ctx echo.Context) {
-	fmt.Printf("error: %s\n", err.Error())
-	ctx.Response().Status = http.StatusInternalServerError
-	if !ctx.Response().Committed {
-		ctx.Response().Write([]byte(err.Error()))
 	}
 }

@@ -15,22 +15,27 @@ paths:
       tags:
         - opa
       parameters:
-        - name: request
-          in: header
-          required: true
-          description: request line from nginx
-          schema:
-            type: string
-            example: GET /fhir/Patient/123?subject.identifier=1234567890 HTTP/1.1
+#        - name: request
+#          in: header
+#          required: false
+#          description: request line from nginx
+#          schema:
+#            type: string
+#            example: GET /fhir/Patient/123?subject.identifier=1234567890 HTTP/1.1
         - name: X-Userinfo
           in: header
-          required: true
+#          required: true
           description: token introspection result
           content:
             application/json:
               schema:
                 type: object
                 example: {"client_id":"did:web:example.com:iam:client","sub":"did:web:example.com:iam:verifier", "scope":"eOverdracht-sender"}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         '200':
           description: Successful request. Returns the result of the OPA policy evaluation
@@ -43,9 +48,12 @@ components:
     Outcome:
       type: object
       required:
-        - allow
+        - result
       properties:
-        allow:
-          type: boolean
-          description: The result of the OPA policy evaluation
-          example: true
+        result:
+          type: object
+#          schema:
+#            allow:
+#              type: boolean
+#              description: The result of the OPA policy evaluation
+#              example: true
