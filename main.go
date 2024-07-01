@@ -23,7 +23,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/nuts-foundation/nuts-pxp/policy"
 	"net/http"
 	"os"
 	"os/signal"
@@ -35,6 +34,7 @@ import (
 	"github.com/nuts-foundation/nuts-pxp/api/pip"
 	"github.com/nuts-foundation/nuts-pxp/config"
 	"github.com/nuts-foundation/nuts-pxp/db"
+	"github.com/nuts-foundation/nuts-pxp/policy"
 )
 
 func main() {
