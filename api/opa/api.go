@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-
 	"github.com/nuts-foundation/nuts-pxp/policy"
 )
 
@@ -18,6 +16,9 @@ type Wrapper struct {
 }
 
 func (w Wrapper) EvaluateDocumentApisix(ctx context.Context, request EvaluateDocumentApisixRequestObject) (EvaluateDocumentApisixResponseObject, error) {
+	if request.Body == nil {
+		return nil, errors.New("missing body")
+	}
 	// APISIX combines the 'openid-connect' and 'opa' plugin results into the following body:
 	//{
 	//	"input": {
@@ -50,15 +51,41 @@ func (w Wrapper) EvaluateDocumentApisix(ctx context.Context, request EvaluateDoc
 	//		}
 	//	}
 	//}
-
-	input, ok := (*request.Body)["input"].(map[string]interface{})
-	if !ok {
-		return nil, errors.New("invalid request, missing 'input'")
+	outcome, err := w.handleEvaluate(ctx, *request.Body)
+	if err != nil {
+		return nil, err
 	}
-	httpRequest, ok := input["request"].(map[string]interface{})
+
+	// Expected response by APISIX is of the form:
+	//{
+	//	"result": {
+	//		"allow": true
+	//	}
+	//}
+	return EvaluateDocumentApisix200JSONResponse(*outcome), nil
+}
+
+func (w Wrapper) EvaluateDocument(ctx context.Context, request EvaluateDocumentRequestObject) (EvaluateDocumentResponseObject, error) {
+	if request.Body == nil {
+		return nil, errors.New("missing body")
+	}
+	//fmt.Printf("%v\n", *request.Body)
+
+	outcome, err := w.handleEvaluate(ctx, *request.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return EvaluateDocument200JSONResponse(*outcome), nil
+}
+
+func (w Wrapper) handleEvaluate(ctx context.Context, input Input) (*Outcome, error) {
+
+	httpRequest, ok := input.Input["request"].(map[string]interface{})
 	if !ok {
 		return nil, errors.New("invalid request, missing 'input.request'")
 	}
+
 	httpHeaders, ok := httpRequest["headers"].(map[string]interface{})
 	if !ok {
 		return nil, errors.New("invalid request, missing 'input.request.headers'")
@@ -77,47 +104,9 @@ func (w Wrapper) EvaluateDocumentApisix(ctx context.Context, request EvaluateDoc
 		return nil, fmt.Errorf("invalid request, failed to unmarshal X-Userinfo: %w", err)
 	}
 
-	descision, err := w.DecisionMaker.Query(ctx, httpRequest, xUserinfo)
+	decision, err := w.DecisionMaker.Query(ctx, httpRequest, xUserinfo)
 	if err != nil {
 		return nil, err
 	}
-
-	// Expected response by APISIX is of the form:
-	//{
-	//	"result": {
-	//		"allow": true
-	//	}
-	//}
-	result := map[string]interface{}{"allow": descision}
-	return EvaluateDocumentApisix200JSONResponse{Result: result}, nil
-}
-
-func (w Wrapper) EvaluateDocument(ctx context.Context, request EvaluateDocumentRequestObject) (EvaluateDocumentResponseObject, error) {
-	// parse the requestLine and extract the method and path
-	// the requestLine is formatted as an HTTP request line
-	// e.g. "GET /api/v1/resource HTTP/1.1"
-	// we are only interested in the method and path
-	method, path, err := parseRequestLine(request.Params.Request)
-	if err != nil {
-		return nil, err
-	}
-	httpRequest := map[string]interface{}{}
-	httpRequest["method"] = method
-	httpRequest["path"] = path
-
-	descision, err := w.DecisionMaker.Query(ctx, httpRequest, request.Params.XUserinfo)
-	if err != nil {
-		return nil, err
-	}
-	return EvaluateDocument200JSONResponse{Allow: descision}, nil
-}
-
-// parseRequestLine parses the request line and extracts the method and path
-// e.g. "GET /api/v1/resource HTTP/1.1" -> "GET", "/api/v1/resource"
-func parseRequestLine(requestLine string) (method, path string, err error) {
-	parts := strings.Split(requestLine, " ")
-	if len(parts) != 3 {
-		return "", "", fmt.Errorf("invalid request line: %s", requestLine)
-	}
-	return parts[0], parts[1], nil
+	return &Outcome{Result: map[string]interface{}{"allow": decision}}, nil
 }

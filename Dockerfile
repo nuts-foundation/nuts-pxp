@@ -1,5 +1,5 @@
 # golang alpine
-FROM golang:1.22.4-alpine as builder
+FROM golang:1.22.5-alpine AS builder
 
 ARG TARGETARCH
 ARG TARGETOS
@@ -12,8 +12,8 @@ RUN apk update \
             musl-dev \
  && update-ca-certificates
 
-ENV GO111MODULE on
-ENV GOPATH /
+ENV GO111MODULE=on
+ENV GOPATH=/
 
 RUN mkdir /opt/nuts-pxp && cd /opt/nuts-pxp
 COPY go.mod .

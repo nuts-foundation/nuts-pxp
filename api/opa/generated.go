@@ -10,41 +10,32 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/oapi-codegen/runtime"
 	strictecho "github.com/oapi-codegen/runtime/strictmiddleware/echo"
 )
 
-// ApisixOutcome defines model for ApisixOutcome.
-type ApisixOutcome struct {
-	Result map[string]interface{} `json:"result"`
+// Input defines model for Input.
+type Input struct {
+	// Input Policy decision information. Must contain the fields in the example.
+	Input map[string]interface{} `json:"input"`
 }
 
 // Outcome defines model for Outcome.
 type Outcome struct {
-	// Allow The result of the OPA policy evaluation
-	Allow bool `json:"allow"`
+	// Result The result of the OPA policy evaluation
+	Result map[string]interface{} `json:"result"`
 }
 
-// EvaluateDocumentParams defines parameters for EvaluateDocument.
-type EvaluateDocumentParams struct {
-	// Request request line from nginx
-	Request string `json:"request"`
-
-	// XUserinfo token introspection result
-	XUserinfo map[string]interface{} `json:"X-Userinfo"`
-}
-
-// EvaluateDocumentApisixJSONBody defines parameters for EvaluateDocumentApisix.
-type EvaluateDocumentApisixJSONBody = map[string]interface{}
+// EvaluateDocumentJSONRequestBody defines body for EvaluateDocument for application/json ContentType.
+type EvaluateDocumentJSONRequestBody = Input
 
 // EvaluateDocumentApisixJSONRequestBody defines body for EvaluateDocumentApisix for application/json ContentType.
-type EvaluateDocumentApisixJSONRequestBody = EvaluateDocumentApisixJSONBody
+type EvaluateDocumentApisixJSONRequestBody = Input
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// calls https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input internally
 	// (POST /v1/data)
-	EvaluateDocument(ctx echo.Context, params EvaluateDocumentParams) error
+	EvaluateDocument(ctx echo.Context) error
 	// calls https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input internally
 	// (POST /v1/data/apisix)
 	EvaluateDocumentApisix(ctx echo.Context) error
@@ -59,47 +50,8 @@ type ServerInterfaceWrapper struct {
 func (w *ServerInterfaceWrapper) EvaluateDocument(ctx echo.Context) error {
 	var err error
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params EvaluateDocumentParams
-
-	headers := ctx.Request().Header
-	// ------------- Required header parameter "request" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("request")]; found {
-		var Request string
-		n := len(valueList)
-		if n != 1 {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for request, got %d", n))
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "request", valueList[0], &Request, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true})
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter request: %s", err))
-		}
-
-		params.Request = Request
-	} else {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Header parameter request is required, but not found"))
-	}
-	// ------------- Required header parameter "X-Userinfo" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("X-Userinfo")]; found {
-		var XUserinfo map[string]interface{}
-		n := len(valueList)
-		if n != 1 {
-			return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Expected one value for X-Userinfo, got %d", n))
-		}
-
-		err = json.Unmarshal([]byte(valueList[0]), &XUserinfo)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Error unmarshaling parameter 'X-Userinfo' as JSON")
-		}
-
-		params.XUserinfo = XUserinfo
-	} else {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Header parameter X-Userinfo is required, but not found"))
-	}
-
 	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.EvaluateDocument(ctx, params)
+	err = w.Handler.EvaluateDocument(ctx)
 	return err
 }
 
@@ -146,7 +98,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 }
 
 type EvaluateDocumentRequestObject struct {
-	Params EvaluateDocumentParams
+	Body *EvaluateDocumentJSONRequestBody
 }
 
 type EvaluateDocumentResponseObject interface {
@@ -170,7 +122,7 @@ type EvaluateDocumentApisixResponseObject interface {
 	VisitEvaluateDocumentApisixResponse(w http.ResponseWriter) error
 }
 
-type EvaluateDocumentApisix200JSONResponse ApisixOutcome
+type EvaluateDocumentApisix200JSONResponse Outcome
 
 func (response EvaluateDocumentApisix200JSONResponse) VisitEvaluateDocumentApisixResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
@@ -202,10 +154,14 @@ type strictHandler struct {
 }
 
 // EvaluateDocument operation middleware
-func (sh *strictHandler) EvaluateDocument(ctx echo.Context, params EvaluateDocumentParams) error {
+func (sh *strictHandler) EvaluateDocument(ctx echo.Context) error {
 	var request EvaluateDocumentRequestObject
 
-	request.Params = params
+	var body EvaluateDocumentJSONRequestBody
+	if err := ctx.Bind(&body); err != nil {
+		return err
+	}
+	request.Body = &body
 
 	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
 		return sh.ssi.EvaluateDocument(ctx.Request().Context(), request.(EvaluateDocumentRequestObject))
