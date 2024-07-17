@@ -15,7 +15,7 @@ type Wrapper struct {
 	DecisionMaker policy.DecisionMaker
 }
 
-func (w Wrapper) EvaluateDocumentApisix(ctx context.Context, request EvaluateDocumentApisixRequestObject) (EvaluateDocumentApisixResponseObject, error) {
+func (w Wrapper) EvaluateDocumentWildcardPolicy(ctx context.Context, request EvaluateDocumentWildcardPolicyRequestObject) (EvaluateDocumentWildcardPolicyResponseObject, error) {
 	if request.Body == nil {
 		return nil, errors.New("missing body")
 	}
@@ -62,7 +62,7 @@ func (w Wrapper) EvaluateDocumentApisix(ctx context.Context, request EvaluateDoc
 	//		"allow": true
 	//	}
 	//}
-	return EvaluateDocumentApisix200JSONResponse(*outcome), nil
+	return EvaluateDocumentWildcardPolicy200JSONResponse(*outcome), nil
 }
 
 func (w Wrapper) EvaluateDocument(ctx context.Context, request EvaluateDocumentRequestObject) (EvaluateDocumentResponseObject, error) {
