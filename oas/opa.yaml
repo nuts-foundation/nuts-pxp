@@ -14,23 +14,31 @@ paths:
         The given request and X-Userinfo headers are used to create the input document for the OPA policy.
       tags:
         - opa
-      parameters:
-        - name: request
-          in: header
-          required: true
-          description: request line from nginx
-          schema:
-            type: string
-            example: GET /fhir/Patient/123?subject.identifier=1234567890 HTTP/1.1
-        - name: X-Userinfo
-          in: header
-          required: true
-          description: token introspection result
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Input'
+      responses:
+        '200':
+          description: Successful request. Returns the result of the OPA policy evaluation
           content:
             application/json:
               schema:
-                type: object
-                example: {"client_id":"did:web:example.com:iam:client","sub":"did:web:example.com:iam:verifier", "scope":"eOverdracht-sender"}
+                $ref: '#/components/schemas/Outcome'
+  /v1/data/apisix:
+    post:
+      operationId: evaluateDocumentApisix
+      summary: calls https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input internally
+      description: |
+        The given request and X-Userinfo headers are used to create the input document for the OPA policy.
+      tags:
+        - opa
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Input'
       responses:
         '200':
           description: Successful request. Returns the result of the OPA policy evaluation
@@ -40,12 +48,37 @@ paths:
                 $ref: '#/components/schemas/Outcome'
 components:
   schemas:
+    Input:
+      type: object
+      required:
+        - input
+      properties:
+        input:
+          type: object
+          description: Policy decision information. Must contain the fields in the example.
+          example: |
+            {
+              "input": { 
+                "request": {
+                  "method": "GET", 
+                  "path": "/resource", 
+                  "headers": {
+                    "X-Userinfo": "base64 encoded user info"
+                  }
+                }
+              } 
+            }
     Outcome:
       type: object
       required:
-        - allow
+        - result
       properties:
-        allow:
-          type: boolean
+        result:
+          type: object
           description: The result of the OPA policy evaluation
-          example: true
+          example: |
+            {
+              "result": {
+                "allow": true
+              }
+            }
