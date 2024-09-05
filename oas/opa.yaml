@@ -26,12 +26,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Outcome'
-  /v1/data/apisix:
+  /v1/data/*:
     post:
-      operationId: evaluateDocumentApisix
+      operationId: evaluateDocumentWildcardPolicy
       summary: calls https://www.openpolicyagent.org/docs/latest/rest-api/#get-a-document-with-input internally
       description: |
-        The given request and X-Userinfo headers are used to create the input document for the OPA policy.
+        The wildcard contains path elements normally used to select an OPA policy.
+        This API ignores the wildcard (policy) and does the same thing as /v1/data (select policy based on scope).
       tags:
         - opa
       requestBody:
