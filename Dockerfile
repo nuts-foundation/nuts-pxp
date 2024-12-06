@@ -24,7 +24,7 @@ COPY . .
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-w -s" -o /opt/nuts/nuts-pxp
 
 # alpine
-FROM alpine:3.20.2
+FROM alpine:3.21.0
 RUN apk update \
   && apk add --no-cache \
              tzdata \
