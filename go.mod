@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/glebarez/sqlite v1.11.0
 	github.com/knadh/koanf v1.5.0
-	github.com/labstack/echo/v4 v4.12.0
+	github.com/labstack/echo/v4 v4.13.3
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/open-policy-agent/opa v0.67.1
 	github.com/pressly/goose/v3 v3.23.0
@@ -71,7 +71,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
-	golang.org/x/net v0.30.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
