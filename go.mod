@@ -8,7 +8,7 @@ require (
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/open-policy-agent/opa v0.67.1
-	github.com/pressly/goose/v3 v3.23.0
+	github.com/pressly/goose/v3 v3.24.0
 	github.com/spf13/pflag v1.0.5
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.11
@@ -44,7 +44,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mfridman/interpolate v0.0.2 // indirect
-	github.com/microsoft/go-mssqldb v1.7.2 // indirect
+	github.com/microsoft/go-mssqldb v1.8.0 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
@@ -71,7 +71,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
-	golang.org/x/net v0.30.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
